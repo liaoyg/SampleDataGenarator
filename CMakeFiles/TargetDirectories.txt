@@ -1,0 +1,3 @@
+C:/Users/Yangguang/Downloads/GenericDataObjectReader/GenericDataObjectReader/build/CMakeFiles/GenericDataObjectReader.dir
+C:/Users/Yangguang/Downloads/GenericDataObjectReader/GenericDataObjectReader/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Yangguang/Downloads/GenericDataObjectReader/GenericDataObjectReader/build/CMakeFiles/ZERO_CHECK.dir
