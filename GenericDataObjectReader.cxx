@@ -15,6 +15,12 @@
 
 using namespace std;
 
+enum DATATYPE
+{
+	SCALAR,
+	VECTOR,
+};
+
 int main ( int argc, char *argv[] )
 {
   // Ensure a filename was specified
@@ -82,8 +88,11 @@ int main ( int argc, char *argv[] )
 			  if (!pd->HasArray(vectorName))
 				  std::cout << "No such arry named: " << vectorName << std::endl;
 			  vtkDataArray* vectorsflds = pd->GetArray(vectorName);
-			  if (vectorsflds->GetNumberOfComponents() != 3)
-				  continue;
+
+			  DATATYPE type = SCALAR;
+			  float max = vectorsflds->GetMaxNorm();
+			  if (vectorsflds->GetNumberOfComponents() == 3)
+				  type = VECTOR;
 			  double* bound = output->GetBounds();
 			  vector<double> datasetbox(bound, bound + 6);
 
@@ -102,24 +111,53 @@ int main ( int argc, char *argv[] )
 						  octree->FindPointsWithinRadius(radius, point, result);
 						  //int closestId = octree->FindClosestPoint(point);
 						  float vectorres[3] = { 0, 0, 0 };
+						  float scalarres = 0;
 						  double accudist = 0;
 						  for (int n = 0; n < result->GetNumberOfIds(); n++) {
 							  double* referpt = output->GetPoint(result->GetId(n));
 							  double dis = vtkMath::Distance2BetweenPoints(referpt, point);
-							  double* refervctor = vectorsflds->GetTuple3(result->GetId(n));
-							  for (int coord = 0; coord < 3; coord++)
-								  vectorres[coord] += refervctor[coord] * dis;
+							  double refersclar = 0;
+							  double* refervctor = nullptr;
+							  switch (type)
+							  {
+							  case SCALAR:
+								  refersclar = vectorsflds->GetTuple1(result->GetId(n));
+								  scalarres += refersclar * dis;
+								  break;
+							  case VECTOR:
+								  refervctor = vectorsflds->GetTuple3(result->GetId(n));
+								  for (int coord = 0; coord < 3; coord++)
+									  vectorres[coord] += refervctor[coord] * dis;
+								  break;
+							  default:
+								  break;
+							  } 
 							  accudist += dis;
 						  }
-						  if (accudist != 0) {
-							  for (int coord = 0; coord < 3; coord++)
-								  vectorres[coord] /= accudist;
-						  }
-						  //double* vectorclose = output->GetPoint(closestId);
-						  vtkMath::Normalize(vectorres);
-						  for (int coord = 0; coord < 3; coord++) {
-							  //vectorres[coord] = vectorclose[coord];
-							  out.write(reinterpret_cast<char*>(&vectorres[coord]), sizeof(vectorres[coord]));
+						  switch (type)
+						  {
+						  case SCALAR:
+							  if (accudist != 0)
+								  scalarres /= accudist;
+							  scalarres /= max;
+							  if (scalarres > 0.01)
+								  cout << scalarres << endl;
+							  out.write(reinterpret_cast<char*>(&scalarres), sizeof(scalarres));
+							  break;
+						  case VECTOR:
+							  if (accudist != 0) {
+								  for (int coord = 0; coord < 3; coord++)
+									  vectorres[coord] /= accudist;
+							  }
+							  //double* vectorclose = output->GetPoint(closestId);
+							  vtkMath::Normalize(vectorres);
+							  for (int coord = 0; coord < 3; coord++) {
+								  //vectorres[coord] = vectorclose[coord];
+								  out.write(reinterpret_cast<char*>(&vectorres[coord]), sizeof(vectorres[coord]));
+							  }
+							  break;
+						  default:
+							  break;
 						  }
 						  //out2 << vectorres[0] << " " << vectorres[1] << " " << vectorres[2] << " " << endl;
 					  }
